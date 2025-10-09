@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnythingLLM 对话界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        header {
+            background: rgba(30, 40, 80, 0.8);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+        
+        .subtitle {
+            color: #bbbbbb;
+            font-size: 1.1rem;
+        }
+        
+        .config-panel {
+            background: rgba(30, 40, 80, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            width: 350px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            height: fit-content;
+        }
+        
+        .chat-container {
+            flex: 1;
+            background: rgba(30, 40, 80, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .section-title {
+            color: #64ffda;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #90a4ae;
+            font-size: 0.95rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #0083b0, #00b4db);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .test-btn {
+            background: linear-gradient(135deg, #00c853, #009624);
+            margin-top: 10px;
+        }
+        
+        .test-btn:hover {
+            background: linear-gradient(135deg, #009624, #00c853);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            min-height: 400px;
+            max-height: 500px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .user-message {
+            background: rgba(41, 128, 185, 0.6);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot-message {
+            background: rgba(46, 204, 113, 0.4);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .user-sender {
+            color: #4fc3f7;
+        }
+        
+        .bot-sender {
+            color: #64ffda;
+        }
+        
+        .message-content {
+            line-height: 1.5;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        #send-btn {
+            width: auto;
+            padding: 15px 25px;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            color: #90a4ae;
+            font-style: italic;
+        }
+        
+        .status-indicator {
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .status-connected {
+            background: rgba(46, 204, 113, 0.3);
+            color: #64ffda;
+        }
+        
+        .status-disconnected {
+            background: rgba(231, 76, 60, 0.3);
+            color: #ff7979;
+        }
+        
+        .workspace-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .error-details {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #ff7979;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .config-panel {
+                width: 100%;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AnythingLLM 对话界面</h1>
+        <p class="subtitle">基于 AnythingLLM API 的智能对话系统</p>
+    </header>
+    
+    <div class="container">
+        <div class="config-panel">
+            <div class="section-title">
+                <i>⚙️</i>
+                <h2>API 配置</h2>
+            </div>
+            
+            <div class="input-group">
+                <label for="api-url">API 基础 URL</label>
+                <input type="text" id="api-url" placeholder="http://388qt438ca02.vicp.fun" value="http://388qt438ca02.vicp.fun">
+            </div>
+            
+            <div class="input-group">
+                <label for="api-key">API 密钥</label>
+                <input type="text" id="api-key" placeholder="输入您的 API 密钥" value="04KC2ZX-94VMQF7-JM87C81-KFBPQEY">
+            </div>
+            
+            <div class="input-group">
+                <label for="workspace-id">工作区 ID</label>
+                <input type="text" id="workspace-id" placeholder="输入工作区 ID" value="temp">
+            </div>
+            
+            <button id="test-connection" class="test-btn">测试连接</button>
+            
+            <div id="connection-status" class="status-indicator status-disconnected">
+                未连接
+            </div>
+            
+            <div class="workspace-info">
+                <p><strong>使用说明：</strong></p>
+                <p>1. 确保 AnythingLLM 服务正在运行</p>
+                <p>2. 在 AnythingLLM 设置中获取 API 密钥</p>
+                <p>3. 获取或创建工作区 ID</p>
+                <p>4. 测试连接后开始对话</p>
+            </div>
+            
+            <div class="input-group" style="margin-top: 20px;">
+                <label for="system-prompt">系统提示词 (可选)</label>
+                <textarea id="system-prompt" placeholder="设置AI的行为和回复风格..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="temperature">温度参数 (0.1-1.0)</label>
+                <input type="number" id="temperature" min="0.1" max="1.0" step="0.1" value="0.7">
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="section-title">
+                <i>💬</i>
+                <h2>对话界面</h2>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    <div class="message-sender bot-sender">AI 助手</div>
+                    <div class="message-content">您好！我是基于 AnythingLLM 的AI助手。请先配置API连接，然后我们就可以开始对话了。</div>
+                </div>
+            </div>
+            
+            <div class="typing-indicator" id="typing-indicator">
+                AI 正在思考...
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" id="user-input" placeholder="输入您的消息..." disabled>
+                <button id="send-btn" disabled>发送</button>
+            </div>
+            
+            <div id="error-details" class="error-details" style="display: none;">
+                <!-- 错误详情将显示在这里 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const apiUrlInput = document.getElementById('api-url');
+        const apiKeyInput = document.getElementById('api-key');
+        const workspaceIdInput = document.getElementById('workspace-id');
+        const systemPromptInput = document.getElementById('system-prompt');
+        const temperatureInput = document.getElementById('temperature');
+        const testConnectionBtn = document.getElementById('test-connection');
+        const connectionStatus = document.getElementById('connection-status');
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const errorDetails = document.getElementById('error-details');
+        
+        // 状态变量
+        let isConnected = false;
+        
+        // 测试连接
+        testConnectionBtn.addEventListener('click', async function() {
+            const apiUrl = apiUrlInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            const workspaceId = workspaceIdInput.value.trim();
+            
+            if (!apiUrl || !apiKey || !workspaceId) {
+                updateStatus('请填写所有必填字段', false);
+                return;
+            }
+            
+            testConnectionBtn.disabled = true;
+            testConnectionBtn.textContent = '连接中...';
+            errorDetails.style.display = 'none';
+            
+            try {
+                // 测试获取工作区信息
+                const response = await fetch(`${apiUrl}/api/v1/workspace/${workspaceId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const workspaceData = await response.json();
+                    updateStatus(`已连接: ${workspaceData.name || '工作区'}`, true);
+                    isConnected = true;
+                    
+                    // 启用聊天功能
+                    userInput.disabled = false;
+                    sendBtn.disabled = false;
+                    
+                    // 添加连接成功的消息
+                    addMessage('AI 助手', `已成功连接到工作区 "${workspaceData.name}"。现在我们可以开始对话了！`, 'bot');
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('连接测试失败:', error);
+                updateStatus(`连接失败: ${error.message}`, false);
+                isConnected = false;
+                
+                // 显示错误详情
+                errorDetails.innerHTML = `<strong>错误详情:</strong><br>${error.message}`;
+                errorDetails.style.display = 'block';
+                
+                // 禁用聊天功能
+                userInput.disabled = true;
+                sendBtn.disabled = true;
+            } finally {
+                testConnectionBtn.disabled = false;
+                testConnectionBtn.textContent = '测试连接';
+            }
+        });
+        
+        // 发送消息
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        async function sendMessage() {
+            if (!isConnected) {
+                addMessage('系统', '请先测试并确保API连接正常', 'bot');
+                return;
+            }
+            
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // 添加用户消息到聊天界面
+            addMessage('您', message, 'user');
+            userInput.value = '';
+            sendBtn.disabled = true;
+            
+            // 显示正在输入指示器
+            typingIndicator.style.display = 'block';
+            errorDetails.style.display = 'none';
+            scrollToBottom();
+            
+            try {
+                const apiUrl = apiUrlInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+                const workspaceId = workspaceIdInput.value.trim();
+                const temperature = parseFloat(temperatureInput.value);
+                
+                // 构建符合 AnythingLLM API 规范的请求体
+                const requestBody = {
+                    message: message,
+                    mode: "chat"
+                };
+                
+                // 添加可选参数
+                const systemPrompt = systemPromptInput.value.trim();
+                if (systemPrompt) {
+                    requestBody.systemPrompt = systemPrompt;
+                }
+                
+                // 添加温度参数
+                if (temperature && temperature >= 0.1 && temperature <= 1.0) {
+                    requestBody.temperature = temperature;
+                }
+                
+                console.log("发送请求体:", JSON.stringify(requestBody, null, 2));
+                
+                // 发送请求到 AnythingLLM API
+                const response = await fetch(`${apiUrl}/api/v1/workspace/${workspaceId}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch (e) {
+                        // 如果不是JSON响应，尝试获取文本
+                        const errorText = await response.text();
+                        if (errorText) errorMessage += ` - ${errorText}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+                
+                const data = await response.json();
+                console.log("收到响应:", data);
+                
+                // 隐藏正在输入指示器
+                typingIndicator.style.display = 'none';
+                
+                // 添加AI回复到聊天界面
+                if (data.textResponse) {
+                    addMessage('AI 助手', data.textResponse, 'bot');
+                } else if (data.response) {
+                    addMessage('AI 助手', data.response, 'bot');
+                } else {
+                    addMessage('AI 助手', '抱歉，我没有收到有效的回复。', 'bot');
+                }
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                typingIndicator.style.display = 'none';
+                
+                // 显示详细错误信息
+                let errorMessage = `发送消息时出错: ${error.message}`;
+                if (error.message.includes('400')) {
+                    errorMessage += '<br><br><strong>可能的解决方案:</strong><br>' +
+                                   '1. 检查 API 密钥和工作区 ID 是否正确<br>' +
+                                   '2. 确保 AnythingLLM 服务版本兼容<br>' +
+                                   '3. 检查请求体格式是否符合 API 要求';
+                }
+                
+                addMessage('系统', errorMessage, 'bot');
+                
+                // 显示错误详情
+                errorDetails.innerHTML = `<strong>错误详情:</strong><br>${error.message}`;
+                errorDetails.style.display = 'block';
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+        
+        // 添加消息到聊天界面
+        function addMessage(sender, content, type) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}-message`;
+            
+            const senderElement = document.createElement('div');
+            senderElement.className = `message-sender ${type}-sender`;
+            senderElement.textContent = sender;
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'message-content';
+            
+            // 处理包含HTML的内容
+            if (typeof content === 'string' && content.includes('<br>')) {
+                contentElement.innerHTML = content;
+            } else {
+                contentElement.textContent = content;
+            }
+            
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+            
+            chatMessages.appendChild(messageElement);
+            scrollToBottom();
+        }
+        
+        // 更新连接状态
+        function updateStatus(message, connected) {
+            connectionStatus.textContent = message;
+            connectionStatus.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+            isConnected = connected;
+        }
+        
+        // 滚动到底部
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 初始化
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        
+        // 添加调试信息到控制台
+        console.log("AnythingLLM 对话界面已加载");
+        console.log("如果遇到问题，请检查:");
+        console.log("1. API URL 是否正确");
+        console.log("2. API 密钥和工作区 ID 是否正确");
+        console.log("3. AnythingLLM 服务是否正在运行");
+        console.log("4. 浏览器控制台是否有 CORS 错误");
+    </script>
+</body>
+</html>
