@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnythingLLM 对话界面</title>
+    <title>电气知识库 对话界面</title>
     <style>
         /* ... 保持原有样式 ... */
         * {
@@ -221,6 +221,56 @@
             font-size: 0.85rem;
             color: #ff7979;
         }
+        /* 新增：工号验证遮罩层样式 */
+        #auth-overlay {
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10,20,60,0.97);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #auth-box {
+            background: rgba(30,40,80,0.93);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            padding: 32px 26px 24px 26px;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #auth-box label {
+            color: #64ffda;
+            margin-bottom: 10px;
+            font-size: 1.17rem;
+        }
+        #auth-box input {
+            letter-spacing: 2px;
+            font-size: 1.13rem;
+            padding: 12px 14px;
+            text-align: center;
+            margin-bottom: 18px;
+            width: 200px;
+        }
+        #auth-box .auth-error {
+            color: #ff7979;
+            margin-bottom: 12px;
+            display: none;
+        }
+        #auth-box button {
+            width: 180px;
+            margin-top: 8px;
+        }
+        #auth-box .auth-info {
+            color: #bbbbbb;
+            font-size: 0.93rem;
+            margin-top: 9px;
+        }
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -231,13 +281,27 @@
             .message {
                 max-width: 90%;
             }
+            #auth-box {
+                min-width: 80vw;
+                padding: 20px 8vw;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- 工号验证遮罩层（10966883，备注：易伟浩工号） -->
+    <div id="auth-overlay">
+        <form id="auth-box" autocomplete="off" onsubmit="return false;">
+            <label for="employee-id-input">请输入工号以访问本页面：</label>
+            <input id="employee-id-input" type="password" placeholder="工号8位数字" maxlength="8" autocomplete="off" inputmode="numeric" />
+            <div class="auth-error" id="auth-error">工号不正确，请重试。</div>
+            <button id="auth-btn" type="button">验证工号</button>
+            <div class="auth-info">仅限输入易伟浩（工号）访问</div>
+        </form>
+    </div>
     <header>
-        <h1>AnythingLLM 对话界面</h1>
-        <p class="subtitle">基于 AnythingLLM API 的智能对话系统</p>
+        <h1>电气知识库 对话界面</h1>
+        <p class="subtitle">基于 电气知识库 API 的智能对话系统</p>
     </header>
     
     <div class="container">
@@ -270,8 +334,8 @@
             
             <div class="workspace-info">
                 <p><strong>使用说明：</strong></p>
-                <p>1. 确保 AnythingLLM 服务正在运行</p>
-                <p>2. 在 AnythingLLM 设置中获取 API 密钥</p>
+                <p>1. 确保 电气知识库 服务正在运行</p>
+                <p>2. 在 电气知识库 设置中获取 API 密钥</p>
                 <p>3. 获取或创建工作区 ID</p>
                 <p>4. 测试连接后开始对话</p>
             </div>
@@ -296,7 +360,7 @@
             <div class="chat-messages" id="chat-messages">
                 <div class="message bot-message">
                     <div class="message-sender bot-sender">AI 助手</div>
-                    <div class="message-content">您好！我是基于 AnythingLLM 的AI助手。请先配置API连接，然后我们就可以开始对话了。</div>
+                    <div class="message-content">您好！我是基于 电气知识库 的AI助手。请先配置API连接，然后我们就可以开始对话了。</div>
                 </div>
             </div>
             
@@ -316,6 +380,45 @@
     </div>
 
     <script>
+        // 工号验证逻辑
+        (function() {
+            const overlay = document.getElementById('auth-overlay');
+            const eidInput = document.getElementById('employee-id-input');
+            const errorDiv = document.getElementById('auth-error');
+            const authBtn = document.getElementById('auth-btn');
+            
+            // 特定工号，备注：易伟浩工号
+            const TARGET_ID = "10966883";
+
+            // 支持回车键
+            eidInput.addEventListener("keydown", function(e){
+                if (e.key === "Enter") {
+                    authBtn.click();
+                }
+            });
+
+            authBtn.addEventListener("click", function() {
+                let val = eidInput.value.trim();
+                if (val === TARGET_ID) {
+                    // 通过
+                    overlay.style.display = "none";
+                    eidInput.value = "";
+                    errorDiv.style.display = "none";
+                    // 恢复页面滚动
+                    document.body.style.overflow = '';
+                } else {
+                    errorDiv.style.display = "block";
+                }
+            });
+
+            // 进入页面时禁止滚动
+            document.body.style.overflow = 'hidden';
+            // 自动聚焦
+            window.addEventListener("DOMContentLoaded", function() {
+                setTimeout(() => { try { eidInput.focus(); } catch{} }, 100);
+            });
+        })();
+
         // DOM 元素
         const apiUrlInput = document.getElementById('api-url');
         const apiKeyInput = document.getElementById('api-key');
@@ -499,7 +602,7 @@
                             throw new Error(match[1]);
                         }
                     }
-                    // AnythingLLM 通常使用 Server-Sent Events，每段以 \n\n 结尾，正文以 data: 开头
+                    // 电气知识库 通常使用 Server-Sent Events，每段以 \n\n 结尾，正文以 data: 开头
                     const lines = chunkText.split('\n');
                     for (const line of lines) {
                         if (line.startsWith('data:')) {
@@ -555,7 +658,7 @@
                 if (error.message.includes('400')) {
                     errorMessage += '<br><br><strong>可能的解决方案:</strong><br>' +
                                 '1. 检查 API 密钥和工作区 ID 是否正确<br>' +
-                                '2. 确保 AnythingLLM 服务版本兼容<br>' +
+                                '2. 确保 电气知识库 服务版本兼容<br>' +
                                 '3. 检查请求体格式是否符合 API 要求';
                 }
                 addMessage('系统', errorMessage, 'bot');
@@ -624,11 +727,11 @@
         sendBtn.disabled = true;
 
         // 调试信息
-        console.log("AnythingLLM 对话界面已加载");
+        console.log("电气知识库 对话界面已加载");
         console.log("如果遇到问题，请检查:");
         console.log("1. API URL 是否正确");
         console.log("2. API 密钥和工作区 ID 是否正确");
-        console.log("3. AnythingLLM 服务是否正在运行");
+        console.log("3. 电气知识库 服务是否正在运行");
         console.log("4. 浏览器控制台是否有 CORS 错误");
     </script>
 </body>
