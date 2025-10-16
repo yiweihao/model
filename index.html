@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>电气知识库 对话界面</title>
+    <title>电气知识库 对话界面V1.2</title>
     <style>
         /* ... 保持原有样式 ... */
         * {
@@ -271,6 +271,50 @@
             font-size: 0.93rem;
             margin-top: 9px;
         }
+
+        /* ===== 优化 AI 回复中的表格与代码显示 ===== */
+        .message-content table {
+            border-collapse: collapse;
+            margin: 12px 0;
+            background: rgba(50,60,90,0.87);
+            color: #e0eefd;
+            font-size: 0.97em;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            width: 100%;
+        }
+        .message-content th, .message-content td {
+            border: 1px solid #5adafe55;
+            padding: 7px 12px;
+            text-align: left;
+        }
+        .message-content th {
+            background: #217bbad4;
+            color: #fff;
+        }
+        .message-content tr:nth-child(even) {
+            background: #223657ba;
+        }
+        .message-content pre, .message-content code {
+            background: #1c273a;
+            color: #60ffbc;
+            border-radius: 5px;
+            font-family: 'Fira Mono', 'Consolas', 'monospace';
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-size: 0.96em;
+            overflow-x: auto;
+            display: block;
+            white-space: pre;
+        }
+        .message-content code:not(pre code) {
+            display: inline;
+            padding: 2px 5px;
+            margin: 0 2px;
+            font-size: 0.98em;
+            background: #2a3a52;
+            color: #80ffea;
+            border-radius: 3px;
+        }
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -284,6 +328,9 @@
             #auth-box {
                 min-width: 80vw;
                 padding: 20px 8vw;
+            }
+            .message-content table {
+                font-size: 0.92em;
             }
         }
     </style>
@@ -300,7 +347,7 @@
         </form>
     </div>
     <header>
-        <h1>电气知识库 对话界面</h1>
+        <h1>电气知识库 对话界面V1.2 10.16</h1>
         <p class="subtitle">基于 电气知识库 API 的智能对话系统</p>
     </header>
     
@@ -503,6 +550,60 @@
             }
         });
 
+        // Markdown 语法转HTML，支持表格、代码块和内联代码
+        function markdownToHTML(text) {
+            if (typeof text !== "string") return "";
+            // 防止XSS
+            text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            // 代码块 ```lang\ncode\n```，需先处理
+            text = text.replace(/```([^\n]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                return `<pre><code>${code.trim()}</code></pre>`;
+            });
+
+            // 行内代码 `code`
+            text = text.replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+
+            // 表格（支持基础 markdown table）
+            // 检测 markdown 表格: | xxx | xxx |\n| --- | --- |\n| xxxx | xxxx |
+            text = text.replace(/((?:\|.+\|[ \t]*\n)+)(?:\|[ \t]*[-:]+[-| :]+\|[^\n]*\n)((?:\|.*\|[^\n]*\n?)+)/g, function(_, header, body) {
+                // 表头
+                const heads = header.trim().split('\n')[0].split('|').slice(1,-1).map(h => h.trim());
+                // 表格体行
+                const rows = body.trim().split('\n').map(row => row.split('|').slice(1,-1).map(cell => cell.trim()));
+                let html = '<table><thead><tr>';
+                heads.forEach(h => { html += `<th>${h}</th>`; });
+                html += '</tr></thead><tbody>';
+                rows.forEach(r => {
+                    html += '<tr>';
+                    r.forEach(cell => { html += `<td>${cell}</td>`; });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+                return html + '\n';
+            });
+
+            // 粗体 **text**
+            text = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+            // 斜体 _text_ 或 *text*
+            text = text.replace(/(\*|_)((?:(?!\1).)+)\1/g, "<i>$2</i>");
+            // 换行
+            text = text.replace(/\n/g, "<br>");
+
+            return text;
+        }
+
+        // 优化ai回复格式：尽量支持代码/表格/普通文本
+        function formatEnhancedReply(text) {
+            // 若有三反引号或markdown表格，优先markdownToHTML
+            if (/```[\s\S]*?```/.test(text) || /\|.*\|.*\n\|[-: ]+\|/.test(text)) {
+                return markdownToHTML(text);
+            } else {
+                // 仅做基础XSS防护与换行
+                return text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+            }
+        }
+
         // 用于实时流式响应的函数
         async function sendMessage() {
             if (!isConnected) {
@@ -592,6 +693,7 @@
                 let cumulativeText = '';
                 let done = false;
                 let errorCatched = false;
+
                 function processStreamChunk(chunkText) {
                     // 如果流式数据前面有 event: error，直接弹出
                     if (chunkText.startsWith('event: error')) {
@@ -615,11 +717,10 @@
                                 if (typeof data.textResponse !== 'undefined') {
                                     // 增量追加
                                     cumulativeText += data.textResponse;
-                                    // 将\n替换为<br>来强制显示换行
-                                    contentElement.innerHTML = formatReplyWithLineBreaks(cumulativeText);
+                                    contentElement.innerHTML = formatEnhancedReply(cumulativeText);
                                 } else if (typeof data.response !== 'undefined') {
                                     cumulativeText += data.response;
-                                    contentElement.innerHTML = formatReplyWithLineBreaks(cumulativeText);
+                                    contentElement.innerHTML = formatEnhancedReply(cumulativeText);
                                 }
                             } catch (e) {
                                 // 忽略解析(不阻塞流)
@@ -670,13 +771,13 @@
             }
         }
 
-        // 将字符串中的\n替换为<br>，防止XSS
-        function formatReplyWithLineBreaks(text) {
-            if (typeof text !== 'string') return '';
-            return text
-                .replace(/</g, "&lt;").replace(/>/g, "&gt;") // 基础转义
-                .replace(/\n/g, "<br>");
-        }
+        // 已弃用
+        // function formatReplyWithLineBreaks(text) {
+        //     if (typeof text !== 'string') return '';
+        //     return text
+        //         .replace(/</g, "&lt;").replace(/>/g, "&gt;") // 基础转义
+        //         .replace(/\n/g, "<br>");
+        // }
 
         // 添加消息到聊天界面
         function addMessage(sender, content, type) {
@@ -690,15 +791,9 @@
             const contentElement = document.createElement('div');
             contentElement.className = 'message-content';
 
-            // 优先支持<br>，其次将\n替换为<br>
+            // 优先支持优化markdown内容渲染
             if (typeof content === 'string') {
-                if (content.includes('<br>')) {
-                    contentElement.innerHTML = content;
-                } else if (content.includes('\n')) {
-                    contentElement.innerHTML = formatReplyWithLineBreaks(content);
-                } else {
-                    contentElement.textContent = content;
-                }
+                contentElement.innerHTML = formatEnhancedReply(content);
             } else {
                 contentElement.textContent = content;
             }
